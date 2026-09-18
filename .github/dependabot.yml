@@ -1,0 +1,36 @@
+# Dependabot: keeps GitHub Actions and the npm tooling (semantic-release,
+# commitlint, husky) current. Minor/patch updates are grouped into one PR per
+# ecosystem to cut noise; majors arrive as separate PRs.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Vancouver
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: [dependencies, github-actions]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Vancouver
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    labels: [dependencies, npm]
+    open-pull-requests-limit: 5
+    ignore:
+      # conventional-changelog-conventionalcommits 10.x needs
+      # conventional-changelog-writer 9, but @semantic-release/release-notes-
+      # generator still bundles writer 8; the Release workflow then fails at
+      # the notes step. Drop this once the notes generator moves to writer 9.
+      - dependency-name: conventional-changelog-conventionalcommits
+        versions: [">=10"]

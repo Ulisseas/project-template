@@ -1,0 +1,34 @@
+# Exports every completed CI and Release run as OpenTelemetry traces (Honeycomb,
+# Grafana Cloud Traces) and two CI metrics (Grafana Cloud Metrics) through the
+# shared ci-telemetry workflow in ulisseas/.github. workflow_run fires after the
+# listed workflow has concluded, so the exported run carries its final result.
+# Add other workflow display names to the list as the project grows.
+#
+# This repo lives in the ulisseas org, so `secrets: inherit` passes the org
+# secrets HONEYCOMB_INGEST_KEY and GRAFANA_OTLP_TOKEN through; the GRAFANA_OTLP_*
+# and HONEYCOMB_DATASET variables resolve from the org as well. Nothing to set
+# up per repo.
+name: telemetry
+
+on:
+  workflow_run:
+    workflows: [CI, Release]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: telemetry-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  export:
+    uses: ulisseas/.github/.github/workflows/ci-telemetry.yml@main
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      checks: read
+    with:
+      run_id: ${{ github.event.workflow_run.id }}
+    secrets: inherit

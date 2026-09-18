@@ -1,0 +1,85 @@
+# CI for a ulisseas/* project: build on every push to main and on every pull
+# request. Telemetry export lives in telemetry.yml, which fires when this
+# workflow completes and needs the display name "CI" above to stay as is.
+#
+# Two jobs are required status checks on main (see scripts/harden-repo.sh), and
+# a required-check context is matched by job name alone, so keep the names:
+#   ci-build    replace the placeholder step with the project's real build and
+#               test steps ("ci-build" rather than "build" so it never collides
+#               with the build job a project usually adds to release.yml).
+#   commitlint  lints the commit message GitHub will create when the PR is
+#               squash-merged (title + body), so main only ever receives
+#               conventional commits and semantic-release can version them.
+#
+# The "edited" event is included so a title or body change re-lints the
+# message; ci-build skips on it because the tree is unchanged (a skipped job
+# still satisfies the required check for that SHA).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci-build:
+    if: ${{ github.event.action != 'edited' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: package.json
+          cache: npm
+      - name: Install
+        run: npm ci --ignore-scripts
+      # Placeholder: replace with the project's build and test steps, e.g.
+      #   - run: npm run check
+      #   - run: npm run build
+      - name: Build (placeholder)
+        run: npm run build
+
+  commitlint:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: package.json
+          cache: npm
+      - name: Install
+        run: npm ci --ignore-scripts
+      # Title and body are passed through env, never interpolated into the
+      # shell: ${{ }} expansion of attacker-controlled text is a
+      # script-injection hole.
+      - name: Lint the would-be squash commit message
+        # GitHub squash-merges as "<title> (#N)" with the PR body word-wrapped
+        # at 72 columns (see scripts/squash-message.py); lint that, not the
+        # bare title, so header-max-length and body-max-line-length are
+        # enforced before the merge, not after.
+        shell: bash
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 scripts/squash-message.py | npx --no -- commitlint
