@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# Conventional commits validation using commitlint.
+# `--` stops npx from consuming commitlint's flags as its own npm options.
+npx --no -- commitlint --edit "$1"

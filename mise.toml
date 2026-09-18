@@ -1,0 +1,4 @@
+# Tool versions for local development (https://mise.jdx.dev). CI reads the
+# same Node major from package.json "engines".
+[tools]
+node = "24"
