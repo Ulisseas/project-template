@@ -15,6 +15,9 @@
 #   4. Repo settings: delete head branches on merge, squash-only, no wiki/projects.
 #   5. Pin every `uses:` in .github/workflows to a commit SHA (keeps the tag as
 #      a trailing comment so Dependabot can still bump it).
+#   6. Labels listed in .github/dependabot.yml. Dependabot ignores a label that
+#      does not exist (and a custom labels: list replaces its default
+#      "dependencies" label), so without these its PRs arrive unlabelled.
 #
 # Requirements: gh CLI authenticated as an org owner or repo admin
 #   (`gh auth status`). The default branch must already exist on GitHub.
@@ -44,6 +47,14 @@ read -r -a REQUIRED_CHECKS <<<"${REQUIRED_CHECKS:-ci-build commitlint}"
 # does. Everything is SHA-pinned regardless.
 ALLOWED_ACTION_PATTERNS="${ALLOWED_ACTION_PATTERNS:-dash0hq/otel-cicd-action@*}"
 WORKFLOW_DIR="$(cd "$(dirname "$0")/.." && pwd)/.github/workflows"
+# name|colour|description, one per line. Keep in sync with the labels: entries
+# in .github/dependabot.yml.
+DEPENDABOT_LABELS="${DEPENDABOT_LABELS:-$(cat <<'LABELS'
+dependencies|0366d6|Dependency update opened by Dependabot
+npm|cb3837|npm package update
+github-actions|2088ff|GitHub Actions update
+LABELS
+)}"
 
 say()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '   ok    %s\n' "$*"; }
@@ -232,10 +243,21 @@ if (( changed )) && [[ "$DRY_RUN" != 1 ]]; then
   note "workflows rewritten; review with 'git diff .github/workflows' and commit on a feature branch."
 fi
 
+# ----------------------------------------------------------------- 6. labels
+say "Labels referenced by .github/dependabot.yml"
+# --force updates colour and description when the label already exists, so
+# the step is idempotent.
+while IFS='|' read -r name color desc; do
+  [[ -n "$name" ]] || continue
+  run "label '$name'" \
+    gh label create "$name" --repo "$REPO" --color "$color" --description "$desc" --force
+done <<<"$DEPENDABOT_LABELS"
+
 # ------------------------------------------------------------------ summary
 say "Done"
 echo "   Verify:"
 echo "     gh api repos/$REPO/rulesets --jq '.[].name'"
+echo "     gh label list --repo $REPO"
 echo "     gh api repos/$REPO/actions/permissions/fork-pr-contributor-approval"
 echo "     gh api repos/$REPO/actions/permissions/selected-actions"
 echo "     gh repo view $REPO --web   (Settings > Rules, Code security, Actions)"
