@@ -1,6 +1,17 @@
 # Dependabot: keeps GitHub Actions and the npm tooling (semantic-release,
 # commitlint, husky) current. Minor/patch updates are grouped into one PR per
 # ecosystem to cut noise; majors arrive as separate PRs.
+#
+# commit-message pins the conventional prefix to "chore(deps): ..." /
+# "chore(deps-dev): ..." instead of letting Dependabot guess it from recent
+# commits; commitlint.config.cjs exempts exactly that shape. The case of the
+# word after the prefix ("Bump" / "bump") is not configurable: Dependabot
+# mirrors its own last commit on main, or, before one exists, the case it
+# reads from recent commits. That is why the exemption accepts both.
+#
+# The labels below must exist in the repository or Dependabot silently drops
+# them (and a custom labels: list also replaces the default "dependencies"
+# label); scripts/harden-repo.sh step 6 creates them.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -14,6 +25,9 @@ updates:
       actions:
         patterns: ["*"]
     labels: [dependencies, github-actions]
+    commit-message:
+      prefix: chore
+      include: scope
 
   - package-ecosystem: npm
     directory: /
@@ -26,6 +40,9 @@ updates:
       npm-minor-and-patch:
         update-types: [minor, patch]
     labels: [dependencies, npm]
+    commit-message:
+      prefix: chore
+      include: scope
     open-pull-requests-limit: 5
     ignore:
       # conventional-changelog-conventionalcommits 10.x needs
