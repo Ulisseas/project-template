@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   export:
-    uses: ulisseas/.github/.github/workflows/ci-telemetry.yml@677c1ceaf34b315464aa91ce308b91eaa2efbab1 # v1.0.0
+    uses: ulisseas/.github/.github/workflows/ci-telemetry.yml@436e15491626a1b0cf1ef59008eb6d1b5c2fa8d4 # v1.0.1
     permissions:
       contents: read
       actions: read
