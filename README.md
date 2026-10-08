@@ -83,8 +83,8 @@ Public, read-only, fed by every `ulisseas/*` repo that uses this template:
 
 - [Status](https://grafana.ulisseas.com/public-dashboards/dc3e15c21b8a4b2487cdf1dbab08dd64):
   synthetic uptime, latency and TLS expiry of the deployed sites.
-- [CI](https://grafana.ulisseas.com/public-dashboards/9c7fd71e4e3d497f8e3be636275dc4a2):
-  workflow durations and success rate per repo, from the exported CI metrics.
+- [CI Status](https://grafana.ulisseas.com/public-dashboards/f7115f765ce84b779bd8dbe1240009ab):
+  the latest state of every workflow on main, per repo, from the exported CI metrics.
 - [Releases](https://grafana.ulisseas.com/public-dashboards/6d289ba972de4c94ad4b29ebbd0f924a):
   what version each repo has deployed and when, from the `deployed-version`
   artifact.
