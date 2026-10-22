@@ -15,7 +15,7 @@ are org-level secrets and variables inherited by every public repo in the org.
 | `.github/workflows/release.yml` | `Release`: semantic-release on push to `main`. Tags `vX.Y.Z`, publishes a GitHub release with generated notes, and uploads the one-line `deployed-version` artifact the Releases dashboard reads. A comment shows where a deploy job goes. |
 | `.github/dependabot.yml` | Weekly grouped bumps of GitHub Actions and the npm tooling. |
 | `.github/CODEOWNERS` | Review ownership. |
-| `scripts/harden-repo.sh` | Idempotent repo hardening: security features, Actions policy, `protect-main` ruleset, squash-only, SHA-pins every `uses:`. GitHub does not copy settings from a template, so this is step 3 below. |
+| `scripts/harden-repo.sh` | Idempotent repo hardening: a preflight that refuses settings which would break the workflows on `main`, then security features, immutable releases, Actions policy, `protect-main` and `protect-release-tags` rulesets, squash-only, SHA-pins every `uses:`. GitHub does not copy settings from a template, so this is step 3 below. |
 | `scripts/squash-message.py` | Rebuilds the squash commit message from a PR's title and body for `commitlint`. |
 | `commitlint.config.cjs`, `.husky/commit-msg` | Conventional commits, enforced locally (`npm install` installs the hook) and in CI. |
 | `package.json` | Only the tooling: semantic-release, commitlint, husky. Add the project's own dependencies and scripts. |
@@ -45,12 +45,19 @@ comment, and the repo's Actions policy rejects anything else.
 
        scripts/harden-repo.sh
 
-   This turns on Dependabot and secret scanning, makes the `GITHUB_TOKEN`
-   read-only, allow-lists the OTel exporter action, requires approval for
-   workflows from fork PRs, and creates the `protect-main` ruleset: PR-only,
-   required checks `ci-build` and `commitlint`, linear history, squash-merge
-   only. `DRY_RUN=1` previews. Re-run it whenever a required check or an
-   allowed action changes.
+   It first checks the workflows on `main` on GitHub and refuses to change
+   anything if a required check has never run there, an action isn't
+   allow-listed, or an action isn't pinned to a full commit SHA; any of those
+   would block every merge or stop a workflow from running. Then it turns on
+   Dependabot, secret scanning and immutable releases, makes the
+   `GITHUB_TOKEN` read-only, allow-lists the OTel exporter action, requires
+   approval for workflows from fork PRs, and creates two rulesets:
+   `protect-main` (PR-only, required checks `ci-build` and `commitlint`,
+   linear history, squash-merge only) and `protect-release-tags` (`v*` tags
+   can't be deleted, force-pushed or moved). It also lists any other rulesets
+   that stack with these. `DRY_RUN=1` previews and doubles as an audit: it
+   exits 1 when the preflight finds a problem. Re-run it whenever a required
+   check or an allowed action changes; `--help` lists the tunables.
 
 The first push to `main` runs `CI`, then `Release` (a `feat:` or `fix:`
 subject cuts `v1.0.0`), and `telemetry` exports both. Within a few minutes the
