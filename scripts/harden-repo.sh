@@ -97,6 +97,7 @@ say()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '   ok    %s\n' "$*"; }
 skip() { printf '   dry   %s\n' "$*"; }
 note() { printf '   note  %s\n' "$*"; }
+lower() { tr '[:upper:]' '[:lower:]' <<<"$1"; }   # bash 3.2 has no ${var,,}
 
 FAILED=0
 PROBLEMS=()
@@ -148,14 +149,17 @@ while IFS= read -r wf; do
   [[ -n "$wf" ]] || continue
   while IFS= read -r use; do
     [[ "$use" == ./* || "$use" == docker://* ]] && continue
-    action="${use%%@*}"; ref="${use#*@}"; owner="${action%%/*}"
+    action="${use%%@*}"; ref="${use#*@}"
+    # Owner and repo names are case-insensitive on GitHub, and gh reports the
+    # org as "Ulisseas" while workflows say "ulisseas", so compare in lowercase.
+    use_lc=$(lower "$use"); owner="${use_lc%%/*}"
     # GitHub-owned actions and this owner's own (e.g. ulisseas/.github's
     # reusable workflow) are allowed without a pattern.
-    if [[ "$owner" != actions && "$owner" != github && "$owner" != "$OWNER" ]]; then
+    if [[ "$owner" != actions && "$owner" != github && "$owner" != "$(lower "$OWNER")" ]]; then
       allowed=0
       for pattern in ${ALLOWED_ACTIONS[@]+"${ALLOWED_ACTIONS[@]}"}; do
         # shellcheck disable=SC2053  # the pattern is a glob on purpose
-        [[ "$use" == $pattern ]] && allowed=1
+        [[ "$use_lc" == $(lower "$pattern") ]] && allowed=1
       done
       (( allowed )) || problem "$wf uses $use, which is not in ALLOWED_ACTIONS"
     fi
